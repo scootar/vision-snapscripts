@@ -7,11 +7,11 @@ def runPipeline(image, llrobot):
 
     # ---- Example detection stage ----
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (50, 50, 50), (100, 255, 255))
+    mask = cv2.inRange(hsv, (11, 149, 154), (29, 255, 255))
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if len(contours) == 0:
-        return None, image, [0]
+        return np.array([[]]), image, [0]
 
     # ---- Build Nx4 array of boxes ----
     # columns: left, top, right, bottom
@@ -38,16 +38,19 @@ def runPipeline(image, llrobot):
     )
 
     # ---- Vectorized edge distance ----
+    n = len(boxes)
+    zeros = np.zeros((n, n), dtype=np.float32)
+
     dx = np.maximum.reduce([
         left.T - right,
         left - right.T,
-        np.zeros_like(left)
+        zeros
     ])
 
     dy = np.maximum.reduce([
         top.T - bottom,
         top - bottom.T,
-        np.zeros_like(top)
+        zeros
     ])
 
     dist_sq = dx*dx + dy*dy
@@ -59,7 +62,6 @@ def runPipeline(image, llrobot):
     np.fill_diagonal(adjacency, False)
 
     # ---- Connected components (simple DFS) ----
-    n = len(boxes)
     visited = np.zeros(n, dtype=bool)
     clusters = []
 
@@ -112,4 +114,4 @@ def runPipeline(image, llrobot):
     for x,y,w,h,wt in merged:
         llpython += [float(x), float(y), float(w), float(h), float(wt)]
 
-    return None, image, llpython
+    return np.array([[]]), image, llpython
